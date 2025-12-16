@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using CatalogService.Application.DTOs;
+using CatalogService.Application.DTOs.BookDTOs;
+using MediatR;
 
-namespace CatalogService.Application.Features.Books.Commands.CreateBook
+namespace CatalogService.Application.Features.Books.Commands.CreateBook;
+
+public class CreateBookCommand : IRequest<BookDto>
 {
-    internal class CreateBookCommand
-    {
-    }
+    public string Title { get; set; } = string.Empty;
+    public string Author { get; set; } = string.Empty;
+    public string ISBN { get; set; } = string.Empty;
 }

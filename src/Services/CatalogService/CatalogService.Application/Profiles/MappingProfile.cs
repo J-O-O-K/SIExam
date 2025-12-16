@@ -1,12 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using AutoMapper;
+using CatalogService.Application.DTOs;
+using CatalogService.Application.DTOs.BookDTOs;
+using CatalogService.Domain.Entities;
 
-namespace CatalogService.Application.Profiles
+namespace CatalogService.Application.Profiles;
+
+public class MappingProfile : Profile
 {
-    internal class MappingProfile
+    public MappingProfile()
     {
+        CreateMap<Book, BookDto>();
+        CreateMap<CreateBookDto, Book>();
+        CreateMap<UpdateBookDto, Book>();
     }
 }

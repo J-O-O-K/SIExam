@@ -1,12 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using CatalogService.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 
-namespace CatalogService.Persistence
+namespace CatalogService.Persistence;
+
+public class CatalogDbContext : DbContext
 {
-    internal class CatalogDbContext
+    public CatalogDbContext(DbContextOptions<CatalogDbContext> options) : base(options) { }
+
+    public DbSet<Book> Books { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(CatalogDbContext).Assembly);
     }
 }

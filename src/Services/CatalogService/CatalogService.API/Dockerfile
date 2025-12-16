@@ -1,31 +1,31 @@
-# See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
-
-# Depending on the operating system of the host machines(s) that will build or run the containers, the image specified in the FROM statement may need to be changed.
-# For more information, please see https://aka.ms/containercompat
-
-# This stage is used when running from VS in fast mode (Default for Debug configuration)
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-nanoserver-1809 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
-
-# This stage is used to build the service project
-FROM mcr.microsoft.com/dotnet/sdk:8.0-nanoserver-1809 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["CatalogService.API/CatalogService.API.csproj", "CatalogService.API/"]
-RUN dotnet restore "./CatalogService.API/CatalogService.API.csproj"
-COPY . .
-WORKDIR "/src/CatalogService.API"
-RUN dotnet build "./CatalogService.API.csproj" -c %BUILD_CONFIGURATION% -o /app/build
 
-# This stage is used to publish the service project to be copied to the final stage
+# Copy project files with correct paths
+COPY ["src/Services/CatalogService/CatalogService.API/CatalogService.API.csproj", "src/Services/CatalogService/CatalogService.API/"]
+COPY ["src/Services/CatalogService/CatalogService.Application/CatalogService.Application.csproj", "src/Services/CatalogService/CatalogService.Application/"]
+COPY ["src/Services/CatalogService/CatalogService.Domain/CatalogService.Domain.csproj", "src/Services/CatalogService/CatalogService.Domain/"]
+COPY ["src/Services/CatalogService/CatalogService.Infrastructure/CatalogService.Infrastructure.csproj", "src/Services/CatalogService/CatalogService.Infrastructure/"]
+COPY ["src/Services/CatalogService/CatalogService.Persistence/CatalogService.Persistence.csproj", "src/Services/CatalogService/CatalogService.Persistence/"]
+
+RUN dotnet restore "src/Services/CatalogService/CatalogService.API/CatalogService.API.csproj"
+
+# Copy all source files
+COPY . .
+
+WORKDIR "/src/src/Services/CatalogService/CatalogService.API"
+RUN dotnet build "CatalogService.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./CatalogService.API.csproj" -c %BUILD_CONFIGURATION% -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "CatalogService.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
-# This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .

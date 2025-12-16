@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace CatalogService.Infrastructure.Messaging.Events;
 
-namespace CatalogService.Infrastructure.Messaging.Events
+public class BookBorrowedEvent
 {
-    internal class BookBorrowedEvent
-    {
-    }
+    public int BookId { get; set; }
+    public int UserId { get; set; }
+    public DateTime BorrowedAt { get; set; }
 }

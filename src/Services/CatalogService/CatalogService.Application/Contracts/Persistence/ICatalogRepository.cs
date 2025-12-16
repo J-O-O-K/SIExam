@@ -1,12 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using CatalogService.Domain.Entities;
 
-namespace CatalogService.Application.Contracts.Persistence
+namespace CatalogService.Application.Contracts.Persistence;
+
+public interface ICatalogRepository
 {
-    internal class ICatalogRepository
-    {
-    }
+    Task<Book?> GetByIdAsync(int id);
+    Task<IEnumerable<Book>> GetAllAsync();
+    Task<Book?> GetByISBNAsync(string isbn);
+    Task<Book> CreateAsync(Book book);
+    Task<Book> UpdateAsync(Book book);
+    Task DeleteAsync(Book book);
+    Task<bool> ExistsAsync(int id);
 }
