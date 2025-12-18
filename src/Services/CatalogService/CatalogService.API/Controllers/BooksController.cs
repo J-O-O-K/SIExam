@@ -13,7 +13,7 @@ namespace CatalogService.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-//[Authorize]
+[Authorize]
 public class BooksController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -32,7 +32,7 @@ public class BooksController : ControllerBase
         return Ok(books);
     }
 
-    // Get a specific book by ID
+    // Get book by ID
     [HttpGet("{id}")]
     public async Task<ActionResult<BookDto>> GetBook(int id)
     {
@@ -63,7 +63,7 @@ public class BooksController : ControllerBase
         }
     }
 
-    // Update an existing book
+    // Update existing book
     [HttpPut("{id}")]
     public async Task<ActionResult<BookDto>> UpdateBook(int id, [FromBody] UpdateBookDto dto)
     {
@@ -84,7 +84,7 @@ public class BooksController : ControllerBase
         }
     }
 
-    // Delete a book
+    // Delete book
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteBook(int id)
     {

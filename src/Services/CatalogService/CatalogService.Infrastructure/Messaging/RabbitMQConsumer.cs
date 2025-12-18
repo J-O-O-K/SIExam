@@ -1,6 +1,5 @@
 ﻿using CatalogService.Application.Contracts.Persistence;
 using CatalogService.Infrastructure.Messaging.Events;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -17,6 +16,7 @@ public class RabbitMQConsumer : BackgroundService
     private readonly IConfiguration _configuration;
     private IConnection? _connection;
     private IChannel? _channel;
+    private const string QueueName = "catalog_service_queue";
 
     public RabbitMQConsumer(IServiceProvider serviceProvider, IConfiguration configuration)
     {
@@ -36,14 +36,32 @@ public class RabbitMQConsumer : BackgroundService
         _connection = await factory.CreateConnectionAsync(cancellationToken);
         _channel = await _connection.CreateChannelAsync(cancellationToken: cancellationToken);
 
-        await _channel.ExchangeDeclareAsync(exchange: "library_events", type: ExchangeType.Topic, durable: true, cancellationToken: cancellationToken);
+        await _channel.ExchangeDeclareAsync(
+            exchange: "library_events", 
+            type: ExchangeType.Topic, 
+            durable: true, 
+            cancellationToken: cancellationToken);
 
-        var queueDeclareResult = await _channel.QueueDeclareAsync(cancellationToken: cancellationToken);
-        var queueName = queueDeclareResult.QueueName;
-        await _channel.QueueBindAsync(queue: queueName, exchange: "library_events", routingKey: "book.borrowed", cancellationToken: cancellationToken);
-        await _channel.QueueBindAsync(queue: queueName, exchange: "library_events", routingKey: "book.returned", cancellationToken: cancellationToken);
+        await _channel.QueueDeclareAsync(
+            queue: QueueName,
+            durable: true,      
+            exclusive: false,    
+            autoDelete: false,   
+            arguments: null,
+            cancellationToken: cancellationToken);
 
-        Console.WriteLine("[Catalog] RabbitMQ consumer started");
+        await _channel.QueueBindAsync(
+            queue: QueueName, 
+            exchange: "library_events", 
+            routingKey: "book.borrowed", 
+            cancellationToken: cancellationToken);
+        await _channel.QueueBindAsync(
+            queue: QueueName, 
+            exchange: "library_events", 
+            routingKey: "book.returned", 
+            cancellationToken: cancellationToken);
+
+        Console.WriteLine($"[Catalog] RabbitMQ consumer started, queue: {QueueName}");
 
         await base.StartAsync(cancellationToken);
     }
@@ -59,6 +77,8 @@ public class RabbitMQConsumer : BackgroundService
             var message = Encoding.UTF8.GetString(body);
             var routingKey = ea.RoutingKey;
 
+            Console.WriteLine($"[Catalog] Received message with routing key: {routingKey}");
+
             using var scope = _serviceProvider.CreateScope();
             var repository = scope.ServiceProvider.GetRequiredService<ICatalogRepository>();
 
@@ -69,6 +89,7 @@ public class RabbitMQConsumer : BackgroundService
                     var bookBorrowed = JsonSerializer.Deserialize<BookBorrowedEvent>(message);
                     if (bookBorrowed != null)
                     {
+                        Console.WriteLine($"[Catalog] Processing BookBorrowed event for BookId: {bookBorrowed.BookId}");
                         var book = await repository.GetByIdAsync(bookBorrowed.BookId);
                         if (book != null)
                         {
@@ -77,6 +98,10 @@ public class RabbitMQConsumer : BackgroundService
                             await repository.UpdateAsync(book);
                             Console.WriteLine($"[Catalog] Book {book.Id} marked as unavailable");
                         }
+                        else
+                        {
+                            Console.WriteLine($"[Catalog] Book {bookBorrowed.BookId} not found");
+                        }
                     }
                 }
                 else if (routingKey == "book.returned")
@@ -84,6 +109,7 @@ public class RabbitMQConsumer : BackgroundService
                     var bookReturned = JsonSerializer.Deserialize<BookReturnedEvent>(message);
                     if (bookReturned != null)
                     {
+                        Console.WriteLine($"[Catalog] Processing BookReturned event for BookId: {bookReturned.BookId}");
                         var book = await repository.GetByIdAsync(bookReturned.BookId);
                         if (book != null)
                         {
@@ -92,17 +118,29 @@ public class RabbitMQConsumer : BackgroundService
                             await repository.UpdateAsync(book);
                             Console.WriteLine($"[Catalog] Book {book.Id} marked as available");
                         }
+                        else
+                        {
+                            Console.WriteLine($"[Catalog] Book {bookReturned.BookId} not found");
+                        }
                     }
                 }
+
+                await _channel.BasicAckAsync(ea.DeliveryTag, multiple: false);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[Catalog] Error processing message: {ex.Message}");
+                await _channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: true);
             }
         };
 
-        var queueDeclareResult = await _channel.QueueDeclareAsync(cancellationToken: stoppingToken);
-        await _channel.BasicConsumeAsync(queue: queueDeclareResult.QueueName, autoAck: true, consumer: consumer, cancellationToken: stoppingToken);
+        await _channel.BasicConsumeAsync(
+            queue: QueueName, 
+            autoAck: false,
+            consumer: consumer, 
+            cancellationToken: stoppingToken);
+
+        Console.WriteLine($"[Catalog] Started consuming messages from queue: {QueueName}");
 
         await Task.Delay(Timeout.Infinite, stoppingToken);
     }

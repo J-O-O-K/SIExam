@@ -7,7 +7,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
-# Copy project files with correct paths
+# Copy project files
 COPY ["src/Services/CatalogService/CatalogService.API/CatalogService.API.csproj", "src/Services/CatalogService/CatalogService.API/"]
 COPY ["src/Services/CatalogService/CatalogService.Application/CatalogService.Application.csproj", "src/Services/CatalogService/CatalogService.Application/"]
 COPY ["src/Services/CatalogService/CatalogService.Domain/CatalogService.Domain.csproj", "src/Services/CatalogService/CatalogService.Domain/"]
